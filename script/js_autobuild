@@ -1,0 +1,144 @@
+#!/usr/bin/env ruby -w
+
+##
+# Originally by Mike Clark.
+# Modified by Geoffrey Grosenbach
+# Modified by Michael Siebert for use in nebraska
+#
+# From http://www.pragmaticautomation.com/cgi-bin/pragauto.cgi/Monitor/StakingOutFileChanges.rdoc
+#
+# Runs a user-defined command when files are modified.
+#
+# Like autotest, but more customizable. This is useful when you want to do
+# something other than run tests. For example, generate a PDF book, run
+# a single test, or run a legacy Test::Unit suite in an app that also
+# has an rSpec suite.
+#
+# Can use Ruby's Dir[] to get file glob. Quote your args to take advantage of this.
+#
+#  rstakeout 'rake test:recent' **/*.rb
+#  => Only watches Ruby files one directory down (no quotes)
+#
+#  rstakeout 'rake test:recent' '**/*.rb'
+#  => Watches all Ruby files in all directories and subdirectories
+#
+# Modified (with permission) by Geoffrey Grosenbach to call growlnotify for
+# rspec and Test::Unit output.
+#
+# See the PeepCode screencast on rSpec or other blog articles for instructions on
+# setting up growlnotify.
+
+
+
+def rstakeout!(command, file_args)
+  trap('INT') do
+    puts "\nQuitting..."
+    exit
+  end
+
+  files = {}
+
+  file_args.each do |arg|
+    Dir[arg].each { |file|
+      unless File.directory?(file)
+        files[file] = File.mtime(file)
+      end
+    }
+  end
+  
+  puts "Watching #{files.keys.join(', ')}\n\nFiles: #{files.keys.length}"
+
+  loop do
+
+    sleep 1
+
+    changed_file, last_changed = files.find { |file, last_changed|
+      File.mtime(file) > last_changed
+    }
+
+    if changed_file
+      files[changed_file] = File.mtime(changed_file)
+      command.files_changed([changed_file])
+    end
+
+  end
+end
+
+class Cmd
+  attr_reader :command
+  
+  def initialize(command)
+    @command = command
+  end
+  
+  def initial_run
+    run!
+  end
+  
+  def files_changed(files)
+    filtered = []
+    
+    files.each do |file|
+      next unless is_javascript?(file)
+      next unless  File.dirname(file) =~ /\/src\//
+      filtered << file
+    end
+    
+    unless filtered.empty?
+      puts ""
+      puts ""
+      puts "==========================="
+      puts "Files changed, running #{command}"
+      run!(filtered)
+      puts ""
+    end
+  end
+  
+  def run!(changed = [])
+    cmd = "#{command} #{changed.join(' ')}"
+    results = `#{cmd}`
+    puts results
+
+    output = results.slice(/Done. (\d+) errors found./)
+    if output
+      $~[1].to_i > 0 ? growl_fail("JSLint found #{$~[1]} errors") : growl_pass("JSLint passed")
+    end
+  end
+  
+  def is_javascript?(f)
+    f =~ /.js$/
+  end
+
+  def growl(title, msg, img, pri=0, sticky="")
+    system "growl -H localhost -n autobuild_js --priority #{pri} -m #{msg.inspect} -t #{title}"
+  end
+
+  def growl_fail(output)
+    growl "FAIL", "#{output}", "fail.png", 2
+  end
+
+  def growl_pass(output)
+    growl "Pass", "#{output}", "pass.png"
+  end
+end
+
+require "rubygems"
+
+begin
+  require "rspactor"
+  use_rspactor = true
+rescue LoadError
+  use_rspactor = false
+end
+
+
+cmd = Cmd.new("rake js:autobuild")
+
+if use_rspactor
+  puts "Using RSpactor"
+  Runner.load(cmd)
+else
+  puts "Using RStakeout"
+  rstakeout!(cmd, "public/javascripts/dmt//src/**/*.js")
+end
+

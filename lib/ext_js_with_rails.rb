@@ -1,0 +1,2 @@
+module ExtJsWithRails
+end
