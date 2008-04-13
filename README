@@ -1,7 +1,14 @@
 ExtJSWithRails
 ==============
 
-Introduction goes here.
+ExtJSWithRails is a Rails Plugin that tries to ease the creation of ExtJS (http://www.extjs.com/) applications. It includes various little Helpers:
+* a generator to create the skeleton of an ExtJS application
+* extensions to Models and Controllers
+* utilities to distribute JavaScript code over many files and combine them in one file
+* integration of JSLint Javascript Syntax checker and yuicompress JS compressor (both require Java!)
+* rake tasks to build and check the produced JavaScript files
+* a script to call these tasks automatically (like autotest but without testing)
+* growl integration
 
 
 Example
@@ -10,4 +17,4 @@ Example
 Example goes here.
 
 
-Copyright (c) 2008 [name of plugin creator], released under the MIT license
+Copyright (c) 2008 Michael Siebert, released under the MIT license
