@@ -23,9 +23,11 @@ module ExtJsWithRails
       def acts_as_extjs_model(options = {})
         options[:include] ||= [] 
         options[:exclude] ||= []
+        options[:only]    ||= []
         
         options[:include] = [options[:include]].flatten
         options[:exclude] = [options[:exclude]].flatten
+        options[:only]    = [options[:only]].flatten
         
         unless included_modules.include? InstanceMethods 
           class_inheritable_accessor :options
@@ -45,14 +47,21 @@ module ExtJsWithRails
       # by default, it just uses the #attributes hash.
       # configure :include and :exclude via acts_as_extjs_model
       def to_ext_hash
-        h = self.attributes
+        h = {}
+        if options[:only].empty?
+          h = self.attributes
 
-        options[:exclude].each { |m| h.delete(m.to_sym); h.delete(m.to_s) }
-        options[:include].each do |m|
-          x = self.send(m)
-          h[m] = x.respond_to?(:to_ext_hash) ? x.to_ext_hash : x
+          options[:exclude].each { |m| h.delete(m.to_sym); h.delete(m.to_s) }
+          options[:include].each do |m|
+            x = self.send(m)
+            h[m] = x.respond_to?(:to_ext_hash) ? x.to_ext_hash : x
+          end
+        else
+          options[:only].each do |m|
+            x = self.send(m)
+            h[m] = x.respond_to?(:to_ext_hash) ? x.to_ext_hash : x
+          end
         end
-
         h
       end
     end
