@@ -1,5 +1,5 @@
-ExtJSWithRails
-==============
+= ExtJSWithRails
+
 
 ExtJSWithRails is a Rails Plugin that tries to ease the creation of ExtJS (http://www.extjs.com/) applications. It includes various little Helpers:
 * a generator to create the skeleton of an ExtJS application
@@ -11,10 +11,51 @@ ExtJSWithRails is a Rails Plugin that tries to ease the creation of ExtJS (http:
 * growl integration
 
 
-Example
-=======
+== Installation and Setup
 
-Example goes here.
+To set up the plugin to automatically build and check your JS Application, be sure to install the Plugin into your Rails application's vendor/plugins directory. After installing, run the rake task js:setup to copy the neccesary files into your Rails Application.
+
+  rake js:setup
+  
+This will create script/js_autobuild, config/ext_js_with_rails.yml and the directories public/javascript and public/javascript/src
+
+
+== Configuration
+
+For most Rails applications, the default setup should be fine. The deefault configuration file (config/ext_js_with_rails.yml) looks like this:
+
+  --- 
+  root_dir: public/javascript
+  app_name: app
+  
+Currently, the following options are recognized:
+_root_dir_:: the root directory of all your JS stuff (relative to RAILS_ROOT). This can be used if 
+             you don't want to expose your JS Files to the whole world and hide them behind a 
+             controller with some kind of authorization
+_app_name_:: the basename of the resulting JS Files (<app_name>.js and <app_name>-min.js) (defaults to _"app"_)
+_main_file_:: the name of the main file (which includes all other files). (defaults to _"main.js"_)
+_src_dir_::  the name of the directory containing the source files (defaults to _"src"_)
+
+
+== Usage
+
+To build and check the JS Files, the following rake tasks are available:
+
+js:dist:: Builds the Application File
+js:lint:: Checks the JS Files with JSLint
+js:minify:: Minifies the Application file with yuicompressor
+
+If you are as lazy as I am, I created script/js_autobuild which does a js:dist and js:lint automatically whenever a JS source file changes. This is done via a slightly modified version of rstakeout by Geoffrey Grosenbach (http://nubyonrails.com)
+
+== The JS Files
+
+All JS Files are parsed by ERB, so you can do all tricks you can imagine with ERB. The only drawback is that JSLint will complain about the ERB Tags, because they are not valid Javascript. Any hints on changing the recognized Tags? Anyways, there is a special include method, which... includes a list of files. So in your main.js, you'll want to do something like this:
+
+  <%= include Dir.glob("app/*.js") %>
+
+
+  
+
 
 
 Copyright (c) 2008 Michael Siebert, released under the MIT license

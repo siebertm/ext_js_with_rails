@@ -36,31 +36,35 @@ def rstakeout!(command, file_args)
     exit
   end
 
+
+  cnt = 0
   files = {}
 
-  file_args.each do |arg|
-    Dir[arg].each { |file|
-      unless File.directory?(file)
-        files[file] = File.mtime(file)
-      end
-    }
-  end
-  
-  puts "Watching #{files.keys.join(', ')}\n\nFiles: #{files.keys.length}"
-
   loop do
+    
+    if files.empty? || cnt >= 10
+      files = {}
+      file_args.each do |arg|
+        Dir[arg].each { |file|
+          unless File.directory?(file)
+            files[file] = File.mtime(file)
+          end
+        }
+      end
+      cnt = 0
+    end
 
     sleep 1
 
     changed_file, last_changed = files.find { |file, last_changed|
       File.mtime(file) > last_changed
     }
-
     if changed_file
       files[changed_file] = File.mtime(changed_file)
       command.files_changed([changed_file])
     end
 
+    cnt += 1
   end
 end
 
@@ -76,20 +80,12 @@ class Cmd
   end
   
   def files_changed(files)
-    filtered = []
-    
-    files.each do |file|
-      next unless is_javascript?(file)
-      next unless  File.dirname(file) =~ /\/src\//
-      filtered << file
-    end
-    
-    unless filtered.empty?
+    unless files.empty?
       puts ""
       puts ""
       puts "==========================="
       puts "Files changed, running #{command}"
-      run!(filtered)
+      run!(files)
       puts ""
     end
   end
@@ -123,22 +119,10 @@ class Cmd
 end
 
 require "rubygems"
-
-begin
-  require "rspactor"
-  use_rspactor = true
-rescue LoadError
-  use_rspactor = false
-end
-
-
+require "yaml"
 cmd = Cmd.new("rake js:autobuild")
 
-if use_rspactor
-  puts "Using RSpactor"
-  Runner.load(cmd)
-else
-  puts "Using RStakeout"
-  rstakeout!(cmd, "public/javascripts/dmt//src/**/*.js")
-end
+config = YAML.load_file("config/ext_js_with_rails.yml")
+puts "Using RStakeout"
+rstakeout!(cmd, "#{config[:root_dir]}/#{config[:src_dir]}/**/*.js")
 

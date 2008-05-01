@@ -1,1 +1,2 @@
-ActiveRecord::Base.send(:include, ExtJsWithRails::Model) 
+ActiveRecord::Base.send(:include, ExtJsWithRails::Model)
+ActionController::Base.send(:include, ExtJsWithRails::Controller) 
